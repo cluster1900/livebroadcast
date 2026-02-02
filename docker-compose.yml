@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: huya_live
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-huya_live_secret}
+      POSTGRES_DB: huya_live
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U huya_live -d huya_live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - huya_network
+
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - huya_network
+
+  srs:
+    image: ossrs/srs:6.0
+    ports:
+      - "1935:1935"   # RTMP推流端口
+      - "8080:8080"   # HTTP API端口
+      - "8000:8000"   # WebRTC端口
+      - "1985:1985"   # SRT端口
+    volumes:
+      - ./srs/srs.conf:/usr/local/srs/conf/srs.conf
+      - srs_recordings:/recordings
+    command: ./objs/srs -c conf/srs.conf
+    networks:
+      - huya_network
+    restart: unless-stopped
+
+  centrifugo:
+    image: centrifugo/centrifugo:v6.6
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./centrifugo/config.json:/etc/centrifugo/config.json
+    command: centrifugo -c /etc/centrifugo/config.json
+    networks:
+      - huya_network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  nsqlookupd:
+    image: nsqio/nsq:v1.3
+    command: /nsqlookupd/run.sh
+    ports:
+      - "4161:4161"
+    networks:
+      - huya_network
+
+  nsqd:
+    image: nsqio/nsq:v1.3
+    command: /nsqd/run.sh
+    ports:
+      - "4150:4150"
+      - "4151:4151"
+    volumes:
+      - ./nsq:/etc/nsq
+    networks:
+      - huya_network
+    depends_on:
+      - nsqlookupd
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./api:/app
+      - api_cache:/go/pkg/mod
+    environment:
+      - DB_HOST=postgres
+      - REDIS_ADDR=redis:6379
+      - SERVER_MODE=debug
+    networks:
+      - huya_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    volumes:
+      - ./web:/app
+      - web_node_modules:/app/node_modules
+    networks:
+      - huya_network
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    volumes:
+      - ./admin:/app
+      - admin_node_modules:/app/node_modules
+    networks:
+      - huya_network
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  srs_recordings:
+  api_cache:
+  web_node_modules:
+  admin_node_modules:
+
+networks:
+  huya_network:
+    driver: bridge
