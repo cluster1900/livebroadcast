@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Spin, Avatar, Button, Badge } from 'antd'
+import { Avatar, Button, Badge } from 'antd'
 import axios from 'axios'
+import { BellOutlined, MessageOutlined, GiftOutlined, HistoryOutlined } from '@ant-design/icons'
 
 interface LiveRoom {
   id: string
@@ -24,8 +25,10 @@ interface UserInfo {
 function Home() {
   const [rooms, setRooms] = useState<LiveRoom[]>([])
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [notifUnread, setNotifUnread] = useState(0)
+  const [msgUnread, setMsgUnread] = useState(0)
   const navigate = useNavigate()
+  const accessToken = localStorage.getItem('access_token')
 
   useEffect(() => {
     fetchLiveRooms()
@@ -40,8 +43,6 @@ function Home() {
       }
     } catch (error) {
       console.error('Failed to fetch live rooms:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -73,13 +74,27 @@ function Home() {
     setUserInfo(null)
   }
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
-        <Spin size="large" />
-      </div>
-    )
+  const handleRefreshUnread = async () => {
+    if (!accessToken) return
+    try {
+      const [notifRes, msgRes] = await Promise.all([
+        axios.get('/api/v1/notifications/unread-count', { headers: { Authorization: `Bearer ${accessToken}` } }),
+        axios.get('/api/v1/messages/unread-count', { headers: { Authorization: `Bearer ${accessToken}` } })
+      ])
+      setNotifUnread(notifRes.data.data?.count || 0)
+      setMsgUnread(msgRes.data.data?.count || 0)
+    } catch (e) {
+      console.error('获取未读数失败')
+    }
   }
+
+  useEffect(() => {
+    fetchLiveRooms()
+    fetchUserInfo()
+    handleRefreshUnread()
+    const interval = setInterval(handleRefreshUnread, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="home-container">
@@ -96,7 +111,36 @@ function Home() {
         <h2 style={{ margin: 0, color: '#ff6b00' }}>🐯 虎牙直播</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Button type="text" onClick={() => navigate('/leaderboard')}>排行榜</Button>
+          <Button type="text" onClick={() => navigate('/schedules')}>预告</Button>
           {userInfo && <Button type="text" onClick={() => navigate('/streamer')}>主播中心</Button>}
+          {userInfo && (
+            <Badge count={notifUnread} size="small">
+              <Button type="text" icon={<BellOutlined />} onClick={() => navigate('/notifications')}>
+                通知
+              </Button>
+            </Badge>
+          )}
+          {userInfo && (
+            <Badge count={msgUnread} size="small">
+              <Button type="text" icon={<MessageOutlined />} onClick={() => navigate('/messages')}>
+                私信
+              </Button>
+            </Badge>
+          )}
+          {userInfo && (
+            <Badge count={0}>
+              <Button type="text" icon={<GiftOutlined />} onClick={() => navigate('/inventory')}>
+                背包
+              </Button>
+            </Badge>
+          )}
+          {userInfo && (
+            <Badge count={0}>
+              <Button type="text" icon={<HistoryOutlined />} onClick={() => navigate('/history')}>
+                历史
+              </Button>
+            </Badge>
+          )}
           {userInfo ? (
             <>
               <Badge count={userInfo.coin_balance} showZero color="#ff6b00" title="虎牙币">

@@ -52,6 +52,7 @@ function LiveRoom() {
 	const [danmuInput, setDanmuInput] = useState('')
 	const [viewersDrawerOpen, setViewersDrawerOpen] = useState(false)
 	const [viewers, setViewers] = useState<Viewer[]>([])
+	const [playError, setPlayError] = useState(false)
 	const danmuRef = useRef<HTMLDivElement>(null)
 
 	const userId = localStorage.getItem('user_id') || ''
@@ -190,11 +191,28 @@ function LiveRoom() {
 		<div className="room-container">
 			<div className="video-section">
 				<div style={{ position: 'relative', width: '100%', height: '100%' }}>
-					{(room.status === 'live' || room.status === 'running') ? (
+					{(room.status === 'live' || room.status === 'running') && !playError ? (
 						<FLVPlayer
 							src={room.flv_url || room.hls_url}
 							poster={room.cover_url}
+							onError={() => setPlayError(true)}
 						/>
+					) : playError ? (
+						<div style={{
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							height: '100%',
+							background: '#000'
+						}}>
+							<div style={{ fontSize: '48px', marginBottom: 16 }}>📺</div>
+							<p style={{ fontSize: '24px', color: '#fff' }}>直播已结束</p>
+							<p style={{ color: '#999', marginTop: 8 }}>主播: {room.streamer_name}</p>
+							<Button type="primary" style={{ marginTop: 16 }} onClick={() => navigate('/')}>
+								返回首页
+							</Button>
+						</div>
 					) : (
 						<div style={{
 							display: 'flex',

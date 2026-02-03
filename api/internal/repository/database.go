@@ -31,12 +31,24 @@ func InitDB(cfg config.DatabaseConfig) error {
 		&models.LevelConfig{},
 		&models.SensitiveWord{},
 		&models.SystemConfig{},
+		&models.Notification{},
+		&models.PrivateMessage{},
+		&models.WatchHistory{},
+		&models.UserReport{},
+		&models.GiftInventory{},
+		&models.LiveSchedule{},
+		&models.RoomLike{},
+		&models.ScheduledTask{},
 	); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	if err := seedData(); err != nil {
 		return fmt.Errorf("failed to seed data: %w", err)
+	}
+
+	if err := SeedTestData(); err != nil {
+		return fmt.Errorf("failed to seed test data: %w", err)
 	}
 
 	return nil

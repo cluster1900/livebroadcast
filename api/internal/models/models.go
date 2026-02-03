@@ -127,3 +127,88 @@ type SystemConfig struct {
 	Description string    `gorm:"type:text" json:"description"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
+
+type Notification struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID    uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	Type      string    `gorm:"type:varchar(30);not null" json:"type"`
+	Title     string    `gorm:"type:varchar(200)" json:"title"`
+	Content   string    `gorm:"type:text" json:"content"`
+	Link      string    `gorm:"type:text" json:"link"`
+	IsRead    bool      `gorm:"default:false;index" json:"is_read"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+}
+
+type PrivateMessage struct {
+	ID         uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	SenderID   uuid.UUID `gorm:"type:uuid;not null;index" json:"sender_id"`
+	ReceiverID uuid.UUID `gorm:"type:uuid;not null;index" json:"receiver_id"`
+	Content    string    `gorm:"type:text;not null" json:"content"`
+	IsRead     bool      `gorm:"default:false;index" json:"is_read"`
+	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
+}
+
+type WatchHistory struct {
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID        uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	RoomID        uuid.UUID `gorm:"type:uuid;not null;index" json:"room_id"`
+	WatchDuration int       `gorm:"default:0" json:"watch_duration"`
+	CreatedAt     time.Time `gorm:"autoCreateTime" json:"created_at"`
+}
+
+type UserReport struct {
+	ID         uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	ReporterID uuid.UUID  `gorm:"type:uuid;not null;index" json:"reporter_id"`
+	ReportedID uuid.UUID  `gorm:"type:uuid;not null;index" json:"reported_id"`
+	RoomID     *uuid.UUID `gorm:"type:uuid" json:"room_id"`
+	Type       string     `gorm:"type:varchar(30);not null" json:"type"`
+	Reason     string     `gorm:"type:text;not null" json:"reason"`
+	Status     string     `gorm:"type:varchar(20);default:'pending'" json:"status"`
+	HandleNote string     `gorm:"type:text" json:"handle_note"`
+	HandleBy   *uuid.UUID `json:"handle_by"`
+	HandleAt   *time.Time `json:"handle_at"`
+	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
+}
+
+type GiftInventory struct {
+	ID        int       `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID    uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	GiftID    int       `gorm:"not null;index" json:"gift_id"`
+	Count     int       `gorm:"default:1" json:"count"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+type LiveSchedule struct {
+	ID           uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	StreamerID   uuid.UUID  `gorm:"type:uuid;not null;index" json:"streamer_id"`
+	Title        string     `gorm:"type:varchar(200);not null" json:"title"`
+	Description  string     `gorm:"type:text" json:"description"`
+	Category     string     `gorm:"type:varchar(50)" json:"category"`
+	CoverURL     string     `gorm:"type:text" json:"cover_url"`
+	StartTime    time.Time  `gorm:"not null;index" json:"start_time"`
+	EndTime      *time.Time `json:"end_time"`
+	Status       string     `gorm:"type:varchar(20);default:'scheduled'" json:"status"`
+	ReminderSent bool       `gorm:"default:false" json:"reminder_sent"`
+	CreatedAt    time.Time  `gorm:"autoCreateTime" json:"created_at"`
+}
+
+type RoomLike struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	UserID    uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	RoomID    uuid.UUID `gorm:"type:uuid;not null;index" json:"room_id"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+}
+
+type ScheduledTask struct {
+	ID         int        `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name       string     `gorm:"type:varchar(100);not null;uniqueIndex" json:"name"`
+	Type       string     `gorm:"type:varchar(50);not null" json:"type"`
+	CronExpr   string     `gorm:"type:varchar(50)" json:"cron_expr"`
+	LastRunAt  *time.Time `json:"last_run_at"`
+	NextRunAt  *time.Time `json:"next_run_at"`
+	IsEnabled  bool       `gorm:"default:true" json:"is_enabled"`
+	LastResult string     `gorm:"type:text" json:"last_result"`
+	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt  time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+}
